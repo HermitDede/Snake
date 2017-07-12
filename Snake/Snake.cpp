@@ -91,11 +91,20 @@ int main() {
 	HWND console = GetConsoleWindow();
 	RECT r;
 	GetWindowRect(console, &r);
-	// Window frame horizontal = 16 pixel (real = 2), vertical = 39 pixel (real = 32)
+	cout << r.bottom << " " << r.left << " " << r.right << " " << r.top;
+	// Window frame horizontal = +16 pixel (real = 2), vertical = +39 pixel (real = 32)
 	// each column = 8 pixels, each row = 16 pixels
-	//MoveWindow(console, 500, 250, columns * 8 + 16, rows * 16 + 39, TRUE); 
-	MoveWindow(console, 500, 250, 960, 503, TRUE);
+	MoveWindow(console, 500, 250, columns * 8 + 16, (rows + 1) * 16 + 39, TRUE);
+
+	/*while (1) {
+		GetWindowRect(console, &r);
+		system("cls");
+		SetCursorPosition(0, 1);
+		cout << r.bottom << " " << r.left << " " << r.right << " " << r.top;
+		Sleep(1000);
+	}*/
 	
+
 	/*CONSOLE_SCREEN_BUFFER_INFO bf;
 	GetConsoleScreenBufferInfo(hOut, &bf);
 	cout << bf.dwSize.X << " " << bf.dwSize.Y;
@@ -460,10 +469,10 @@ void UpdateHighscore(int highScore) {
 }
 
 void SetScore(int CurrentScore) {
-	SetCursorPosition(55, 28);
+	SetCursorPosition((columns / 2) - 4, rows);
 	SetColor(7);
 	cout << "                                 ";
-	SetCursorPosition(55, 28);
+	SetCursorPosition((columns / 2) - 4, rows);
 	cout << "Score: " << CurrentScore;
 	SetCursorPosition(0, 0);
 }
