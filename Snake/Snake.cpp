@@ -9,17 +9,19 @@
 #include <string>
 #include <conio.h>
 
-using namespace std;
-
-static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
 #define _WIN32_WINNT 0x0500
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
 
-const int rows = 28, columns = 118; // Max Rows = 28 (posY = 0-27), Max Columns = 118 (posX = 0-117)
+using namespace std;
+
+#pragma region Variables and Interface
+static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+static const HWND hDesktop = GetDesktopWindow();
+
+const int rows = 28, columns = 56; // Max Rows = 28 (posY = 0-27), Max Columns = 118 (posX = 0-117)
 const int maxSnakeSize = 300; // maximum snake size which can be reached
 int snakeLength = 3;
 
@@ -67,53 +69,70 @@ void ClearConsole();
 void UpdateHighscore(int highScore);
 void SetScore(int CurrentScore);
 void WaitEnter();
+COORD GetDesktopResolution();
+#pragma endregion
 
 int main() {
 
-	/*TEST 1
-	int sizeX = 500;
-	int sizeY = 1000;
 
-	COORD a;
-	a.X = sizeX;
-	a.Y = sizeY;
+	CONSOLE_SCREEN_BUFFER_INFO currentBuffer;
+	GetConsoleScreenBufferInfo(hOut, &currentBuffer);
+	SetConsoleScreenBufferSize(hOut, currentBuffer.dwMaximumWindowSize);
 
-	SMALL_RECT rect;
-	rect.Top = 0;
-	rect.Left = 0;
-	rect.Bottom = sizeX - 10;
-	rect.Right = sizeY - 10;
-
-	SetConsoleScreenBufferSize(hOut, a);
-	SetConsoleWindowInfo(hOut, 1, &rect);
-	*/
+	COORD desktopResolution;
+	desktopResolution = GetDesktopResolution();
 
 	HWND console = GetConsoleWindow();
 	RECT r;
 	GetWindowRect(console, &r);
-	cout << r.bottom << " " << r.left << " " << r.right << " " << r.top;
 	// Window frame horizontal = +16 pixel (real = 2), vertical = +39 pixel (real = 32)
 	// each column = 8 pixels, each row = 16 pixels
-	MoveWindow(console, 500, 250, columns * 8 + 16, (rows + 1) * 16 + 39, TRUE);
+	int gameWidthInCells = (columns + 4);
+	int gameHeightInCells = ((rows + 1) + 2);
+	int gameWidthInPixels = gameWidthInCells * 8 + 16;
+	int gameHeightInPixels = gameHeightInCells * 16 + 39;
+	MoveWindow(console, (desktopResolution.X - gameWidthInPixels) / 2, (desktopResolution.Y - gameHeightInPixels) / 2,
+		gameWidthInPixels, gameHeightInPixels, TRUE);
 
-	/*while (1) {
-		GetWindowRect(console, &r);
-		system("cls");
-		SetCursorPosition(0, 1);
-		cout << r.bottom << " " << r.left << " " << r.right << " " << r.top;
-		Sleep(1000);
-	}*/
-	
+	int sizeX = columns;
+	int sizeY = rows + 1;
 
-	/*CONSOLE_SCREEN_BUFFER_INFO bf;
-	GetConsoleScreenBufferInfo(hOut, &bf);
-	cout << bf.dwSize.X << " " << bf.dwSize.Y;
+	COORD bufferSize;
+	bufferSize.X = currentBuffer.dwMaximumWindowSize.X;
+	bufferSize.Y = 0;
+	cout << bufferSize.X << " " << bufferSize.Y << endl;
+
 	while (1) {
-		GetConsoleScreenBufferInfo(hOut, &bf);
+		if (bufferSize.Y != gameHeightInCells)
+			bufferSize.Y++;
 		system("cls");
-		cout << bf.dwSize.X << " " << bf.dwSize.Y;
-		Sleep(1000);
-	}*/
+		cout << bufferSize.Y << endl;
+		GetConsoleScreenBufferInfo(hOut, &currentBuffer);
+		cout << currentBuffer.dwSize.X << " " << currentBuffer.dwSize.Y << endl;
+		if (!SetConsoleScreenBufferSize(hOut, bufferSize)) {
+			cout << "Loading (1/2)";
+		}
+		else {
+			cout << "Step 1 out of 2 is finished!" << endl;
+			break;
+		}
+	}
+
+	while (1) {
+		if (bufferSize.X < gameHeightInCells)
+			bufferSize.X++;
+		else
+			bufferSize.X--;
+
+		system("cls");
+		if (!SetConsoleScreenBufferSize(hOut, bufferSize)) {
+			cout << "Game starting...";
+			break;
+		}
+		else {
+			cout << "Loading (2/2)";
+		}
+	}
 
 	while (1) {
 		MainMenu();
@@ -121,6 +140,22 @@ int main() {
 
 	cin.ignore();
 	return 0;
+}
+
+COORD GetDesktopResolution()
+{
+	RECT desktop;
+	COORD desktopCoord;
+	// Get a handle to the desktop window
+	// Get the size of screen to the variable desktop
+	GetWindowRect(hDesktop, &desktop);
+	// The top left corner will have coordinates (0,0)
+	// and the bottom right corner will have coordinates
+	// (horizontal, vertical)
+	desktopCoord.X = desktop.right;
+	desktopCoord.Y = desktop.bottom;
+
+	return desktopCoord;
 }
 
 void Sleep(int miliseconds) {
@@ -149,12 +184,12 @@ void KeyValueFinder() {
 void MainMenu() {
 	ClearConsole();
 
-	SetCursorPosition(52, 15);
+	SetCursorPosition((columns / 2) - 7, 15);
 	cout << "[1] - New Game";
-	SetCursorPosition(52, 16);
+	SetCursorPosition((columns / 2) - 7, 16);
 	cout << "[2] - High Scores";
 
-	int defaultX = 34;
+	int defaultX = (columns / 2) - 24;
 	int defaultY = 5;
 	int titleColors[] = { 255,238,221,204,187,170,153 };
 	int pressedKey = 0;
@@ -188,16 +223,19 @@ void MainMenu() {
 	else if (pressedKey == 50) { // Key Code 50 = number 2
 		ClearConsole();
 
-		SetCursorPosition(52, 8);
+		SetCursorPosition((columns / 2) - 7, 8);
 		cout << "HIGH SCORES";
-		SetCursorPosition(52, 9);
+		SetCursorPosition((columns / 2) - 7, 9);
 		cout << "===========";
 		for (int i = 0; i < 10; i++)
 		{
-			SetCursorPosition(52, 11 + i);
-			cout << i+1 << ".\t" << highScores[i];
+			SetCursorPosition((columns / 2) - 6, 11 + i);
+			if (i + 1 != 10)
+				cout << i + 1 << ".   " << highScores[i];
+			else
+				cout << i + 1 << ".  " << highScores[i];
 		}
-		SetCursorPosition(40, 22);
+		SetCursorPosition((columns / 2) - 19, 22);
 		cout << "Press 'Enter' Key to Return Main Menu!";
 		SetColor(0);
 
@@ -286,11 +324,11 @@ void StartGame() {
 	}
 
 	SetColor(207);
-	SetCursorPosition(55, 12);
+	SetCursorPosition((columns / 2) - 4, 12);
 	cout << "GAME OVER !"; // length 11
-	SetCursorPosition(53, 13);
+	SetCursorPosition((columns / 2) - 6, 13);
 	cout << "Your Score: " << score;  // length 13-16
-	SetCursorPosition(42, 14);
+	SetCursorPosition((columns / 2) - 17, 14);
 	cout << "Press 'Enter' Key to Return Main Menu!"; // length 38
 	UpdateHighscore(score);
 	WaitEnter();
@@ -419,7 +457,7 @@ void PaintAndWrite(char type, int color, int y, int x) {
 int GameLogic(int directionY, int directionX, int snakeArr[maxSnakeSize][2]) {
 	int additiveScore = 0;
 	char nextPos = arr[snakeArr[0][0] + directionY][snakeArr[0][1] + directionX];
-	
+
 	if ((snakeArr[0][0] + directionY) == snakeArr[1][0] && (snakeArr[0][1] + directionX) == snakeArr[1][1])
 		return additiveScore;
 
